@@ -1,30 +1,53 @@
 import os
+import json
 from dotenv import load_dotenv
-from sqlalchemy import select, create_engine, func
+from sqlalchemy import select, create_engine
 from sqlalchemy.orm import Session
+from package.models import create_tables, Book, Shop, Sale, Publisher, Stock
 
-from package.models import create_tables
+
+def load_data(ses, path):
+    """
+     Загрузка тестовых данных в базу данных
+    :param ses: session
+    :param path: путь до JSON-файла с данными
+
+    """
+    with open(path) as f:
+        data = json.load(f)
+
+    for row in data:
+        model = {
+            'publisher': Publisher,
+            'shop': Shop,
+            'book': Book,
+            'stock': Stock,
+            'sale': Sale,
+        }[row.get('model')]
+        add_db = model(id=row.get('pk'), **row.get('fields'))
+        with ses.begin():
+            ses.add(add_db)
 
 
-def get_info_farm(ses, type_location='нормальная', name_person='FuHuK', id_person=5):
-    for row in ses.execute(query_farm(type_location, name_person, id_person)):
-        out = (f"Хроники: {row[0]}\t"
-               f"Имя: {row[1]}\t"
-               f"Профессия: {row[2]}\t"
-               f"Локация: {row[3]}\n"
-               f"Средний опыт: {int(row[5])}\t"
-               f"Средний фарм: {int(row[6])}\n")
+def info_buy_book(ses, publisher):
+    query = (
+        select(Book.title,
+               Shop.name,
+               Sale.price,
+               Sale.date_sale,
+               Publisher.id,
+               Sale.count
+               )
+        .join(Sale.stock_sale)
+        .join(Stock.book)
+        .join(Stock.shop)
+        .join(Book.publisher)
+        .group_by(Book.title, Shop.name, Sale.price, Sale.date_sale, Publisher.id, Sale.count)
+        .where(Publisher.name.ilike(f'%{publisher}%')))
+
+    for row in ses.execute(query):
+        out = f"{row[0]} | {row[1]} | {row[2] * row[5]} | {row[3]}"
         print(out)
-
-
-def get_info_farm_dict(ses, type_location='нормальная'):
-    farm_dict = {}
-    for row in ses.execute(query_farm_dict(type_location)):
-        if row[1] in farm_dict:
-            farm_dict.get(row[1]).update({row[5]: [row[0], int(row[3]), int(row[4])]})
-        else:
-            farm_dict[row[1]] = {row[5]: [row[0], int(row[3]), int(row[4])]}
-    return farm_dict
 
 
 if __name__ == '__main__':
@@ -34,11 +57,7 @@ if __name__ == '__main__':
     create_tables(engine)
 
     with Session(engine) as session:
-        # add_db.add_chronicle_person(session, 2, 1)
 
-        # add_db.add_location(session, 'Каньон Горда', 'нормальная')
+        load_data(session, 'fixtures/tests_data.json')
 
-        # add_db.add_farm(session, 6, 2, 673, 298526, 468083399, 190000000)
-
-        get_info_farm(session, type_location='нормальная', name_person='FuHuK', id_person=6)
-
+        info_buy_book(session, 'O’Reilly')
