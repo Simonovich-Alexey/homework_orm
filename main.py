@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
-from pprint import pprint
 from sqlalchemy import select, create_engine, func
 from sqlalchemy.orm import Session
+
+from package.models import create_tables
 
 
 def get_info_farm(ses, type_location='нормальная', name_person='FuHuK', id_person=5):

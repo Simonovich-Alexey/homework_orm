@@ -13,6 +13,9 @@ class Publisher(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(sq.String(200), unique=True, nullable=False)
 
+    def __str__(self):
+        return f'{self.id} | {self.name}'
+
 
 class Book(Base):
     __tablename__ = 'book'
@@ -23,12 +26,18 @@ class Book(Base):
 
     publisher: Mapped['Publisher'] = relationship(back_populates='books')
 
+    def __str__(self):
+        return f'{self.id} | {self.title} | {self.id_publisher}'
+
 
 class Shop(Base):
     __tablename__ = 'shop'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(sq.String(100), unique=True, nullable=False)
+
+    def __str__(self):
+        return f'{self.id} | {self.name}'
 
 
 class Stock(Base):
@@ -42,6 +51,9 @@ class Stock(Base):
     book: Mapped['Book'] = relationship(back_populates='stocks')
     shop: Mapped['Shop'] = relationship(back_populates='stocks')
 
+    def __str__(self):
+        return f'{self.id} | {self.id_book.name} | {self.id_shop.name} | {self.count}'
+
 
 class Sale(Base):
     __tablename__ = 'sale'
@@ -53,6 +65,9 @@ class Sale(Base):
     count: Mapped[int] = mapped_column(sq.CheckConstraint('count >= 0', name='check_count'), nullable=False)
 
     stock: Mapped['Stock'] = relationship(back_populates='sale')
+
+    def __str__(self):
+        return f'{self.id} | {self.price} | {self.date_sale} | {self.id_stock} | {self.count}'
 
 
 def create_tables(engine):
