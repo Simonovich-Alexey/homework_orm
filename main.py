@@ -29,24 +29,27 @@ def load_data(ses, path):
             ses.add(add_db)
 
 
-def info_buy_book(ses, publisher):
+def info_buy_book(ses, name_publisher):
+    if name_publisher.isdigit():
+        where = Publisher.id == name_publisher
+    else:
+        where = Publisher.name.ilike(f'%{name_publisher}%')
     query = (
         select(Book.title,
                Shop.name,
                Sale.price,
                Sale.date_sale,
                Publisher.id,
-               Sale.count
                )
         .join(Sale.stock_sale)
         .join(Stock.book)
         .join(Stock.shop)
         .join(Book.publisher)
-        .group_by(Book.title, Shop.name, Sale.price, Sale.date_sale, Publisher.id, Sale.count)
-        .where(Publisher.name.ilike(f'%{publisher}%')))
+        .group_by(Book.title, Shop.name, Sale.price, Sale.date_sale, Publisher.id)
+        .where(where))
 
     for row in ses.execute(query):
-        out = f"{row[0]} | {row[1]} | {row[2] * row[5]} | {row[3]}"
+        out = f"{row[0]: <40} | {row[1]: <10} | {row[2]: <8} | {row[3].strftime('%d-%m-%Y')}"
         print(out)
 
 
@@ -56,8 +59,10 @@ if __name__ == '__main__':
     engine = create_engine(os.getenv('DSN'))
     create_tables(engine)
 
+    name = input("Enter publisher name or ID: ")
+
     with Session(engine) as session:
 
-        load_data(session, 'fixtures/tests_data.json')
+        # load_data(session, 'fixtures/tests_data.json')
 
-        info_buy_book(session, 'O’Reilly')
+        info_buy_book(session, name)
